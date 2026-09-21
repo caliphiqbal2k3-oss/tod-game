@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connection test</title>
+<style>
+  body { font-family: -apple-system, system-ui, sans-serif; padding: 24px; text-align: center; }
+  #result { font-size: 20px; margin-top: 24px; }
+</style>
+</head>
+<body>
+<h1>Connection test</h1>
+<p id="result">Testing...</p>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = "https://sislhijujxzjinasqvwl.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_pz3O9UDi6pnmT2YN2n-23A_pSG9_M4n";
+  const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const out = document.getElementById("result");
+
+  async function run() {
+    try {
+      let { data: { session } } = await client.auth.getSession();
+      if (!session) {
+        const { data, error } = await client.auth.signInAnonymously();
+        if (error) throw error;
+        session = data.session;
+      }
+      out.textContent = "✅ Connected! Your private ID starts with " + session.user.id.slice(0, 8);
+    } catch (e) {
+      out.textContent = "❌ Problem: " + (e.message || e);
+    }
+  }
+  run();
+</script>
+</body>
+</html>
