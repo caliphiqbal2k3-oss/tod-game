@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffe3f1">
+<title>Truth or Dare</title>
+<style>
+  :root {
+    --bg1: #ffe3f1;
+    --bg2: #e6dcff;
+    --card: rgba(255, 255, 255, 0.92);
+    --ink: #3b2a4d;
+    --muted: #8b7a9e;
+    --pink: #ff6fae;
+    --purple: #8b6cff;
+    --shadow: 0 10px 30px rgba(120, 80, 170, 0.15);
+    --inputbg: #fff;
+    --inputborder: #e4d9ff;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(160deg, var(--bg1), var(--bg2));
+    background-attachment: fixed;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: max(20px, env(safe-area-inset-top)) 18px max(28px, env(safe-area-inset-bottom));
+    transition: background 0.3s ease, color 0.3s ease;
+  }
+  #app { max-width: 460px; margin: 0 auto; }
+  h1 { font-size: 34px; margin: 8px 0 4px; text-align: center; }
+  #mascot { font-size: 38px; text-align: center; margin: 0 0 4px; transition: transform 0.25s ease; display: block; }
+  #mascot.bounce { animation: mascotBounce 0.5s ease; }
+  .sub { text-align: center; color: var(--muted); margin: 0 0 24px; font-size: 17px; }
+  .card { background: var(--card); border-radius: 24px; padding: 22px; box-shadow: var(--shadow); margin-bottom: 16px; }
+  #app.enter .card { animation: fade 0.35s ease both; }
+  .center { text-align: center; }
+  .label { font-weight: 700; margin: 0 0 12px; font-size: 18px; }
+  .hint { color: var(--muted); margin: 12px 0; font-size: 15px; }
+  .gap { height: 12px; }
+  button { font: inherit; border: 0; cursor: pointer; }
+  .btn {
+    width: 100%; padding: 16px 18px; border-radius: 18px; font-weight: 700; font-size: 18px; color: #fff;
+    background: linear-gradient(135deg, var(--pink), var(--purple));
+    box-shadow: 0 8px 20px rgba(139, 108, 255, 0.35); transition: transform 0.12s ease;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn.ghost { background: var(--inputbg); color: var(--purple); box-shadow: inset 0 0 0 2px var(--inputborder); }
+  .btn.green { background: linear-gradient(135deg, #35c58a, #22a06b); box-shadow: 0 8px 20px rgba(53, 197, 138, 0.35); }
+  .btn.truth { background: linear-gradient(135deg, #ff8ac0, #ff5c9d); box-shadow: 0 8px 20px rgba(255, 92, 157, 0.35); }
+  .btn.dare { background: linear-gradient(135deg, #9d85ff, #6d4dff); }
+  .btn.small { padding: 12px 14px; font-size: 15px; border-radius: 14px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .row2.tight { margin-top: 0; }
+  input[type=text], input[type=password], input[type=number], textarea {
+    width: 100%; padding: 15px 16px; font: inherit; font-size: 18px; border-radius: 16px;
+    border: 2px solid var(--inputborder); background: var(--inputbg); color: var(--ink); outline: none;
+  }
+  textarea { resize: vertical; line-height: 1.4; }
+  input:focus, textarea:focus { border-color: var(--purple); }
+  .code { font-size: 30px; font-weight: 800; letter-spacing: 4px; text-align: center; color: var(--purple); }
+  .scores { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .score {
+    background: var(--card); border-radius: 22px; padding: 14px 10px; text-align: center; box-shadow: var(--shadow);
+    border: 3px solid transparent; transition: border-color 0.3s, transform 0.3s;
+  }
+  .score.active { border-color: var(--pink); transform: translateY(-2px); }
+  .score.winner { border-color: #f5b942; }
+  .pname { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pts { font-size: 40px; font-weight: 800; color: var(--purple); }
+  .pts.bump { animation: bump 0.6s ease; }
+  .turn { font-size: 22px; font-weight: 800; margin: 0 0 6px; }
+  .turncard.swap { animation: turnSwap 0.45s ease both; }
+  .waiting { color: var(--muted); font-size: 17px; margin: 6px 0 14px; }
+  .dots { animation: pulse 1.2s ease-in-out infinite; display: inline-block; }
+  .qcard { text-align: center; padding: 26px 20px; perspective: 900px; }
+  .qcard.pop { animation: flipIn 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+  .badge { display: inline-block; padding: 6px 14px; border-radius: 999px; font-weight: 800; letter-spacing: 1px; font-size: 13px; color: #fff; margin-bottom: 14px; }
+  .badge.truth { background: var(--pink); }
+  .badge.dare { background: var(--purple); }
+  .badge.custom { background: #f5b942; }
+  .qtext { font-size: 24px; line-height: 1.3; font-weight: 700; word-wrap: break-word; }
+  .answer { border-left: 6px solid var(--pink); }
+  .alabel { font-weight: 700; color: var(--muted); margin: 0 0 8px; font-size: 15px; }
+  .atext { font-size: 20px; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word; }
+  .progress { text-align: center; color: var(--muted); font-size: 14px; margin: -8px 0 16px; }
+  .progress.big { font-size: 19px; font-weight: 800; color: var(--purple); margin: -6px 0 8px; }
+  .finalbadge { text-align: center; font-weight: 800; color: var(--pink); margin: -2px 0 14px; font-size: 15px; }
+  .footer { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+  .linkbtn { display: inline-block; margin: 14px 0 0; background: none; color: var(--muted); text-decoration: underline; font-size: 16px; padding: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 999px; border: 2px solid var(--inputborder); background: var(--inputbg); font-weight: 700; font-size: 15px; color: var(--purple); margin: 0 8px 8px 0; }
+  .chip.on { background: linear-gradient(135deg, var(--pink), var(--purple)); color: #fff; border-color: transparent; }
+  .avatarchip { font-size: 22px; padding: 8px 12px; }
+  .avatarchip.on { transform: scale(1.15); box-shadow: 0 4px 14px rgba(139, 108, 255, 0.4); }
+  .streakbadge { text-align: center; font-weight: 800; color: var(--pink); margin: -6px 0 14px; font-size: 15px; }
+  .chiprow { display: flex; flex-wrap: wrap; margin-bottom: 4px; }
+  .segrow { display: flex; border-radius: 16px; overflow: hidden; border: 2px solid var(--inputborder); margin-bottom: 4px; }
+  .seg { flex: 1; padding: 12px; text-align: center; font-weight: 700; background: var(--inputbg); color: var(--purple); font-size: 15px; }
+  .seg.on { background: linear-gradient(135deg, var(--pink), var(--purple)); color: #fff; }
+  .checklist { max-height: 340px; overflow-y: auto; border: 2px solid var(--inputborder); border-radius: 16px; padding: 10px; }
+  .cgroup { font-weight: 800; color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 10px 4px 4px; }
+  .citem { display: flex; align-items: flex-start; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--inputborder); font-size: 15px; }
+  .citem:last-child { border-bottom: none; }
+  .citem input { width: 20px; height: 20px; margin-top: 2px; flex-shrink: 0; }
+  .ckind { font-weight: 800; font-size: 11px; padding: 2px 8px; border-radius: 999px; color: #fff; margin-right: 6px; flex-shrink: 0; }
+  .ckind.truth { background: var(--pink); }
+  .ckind.dare { background: var(--purple); }
+  .pickcount { text-align: center; font-weight: 800; color: var(--purple); margin: 10px 0; font-size: 16px; }
+  .dragon { font-size: 64px; text-align: center; margin: 0 0 6px; }
+  .winnername { font-size: 28px; font-weight: 800; text-align: center; margin: 4px 0; }
+  #toast {
+    display: none; position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: max(24px, env(safe-area-inset-bottom)); background: #3b2a4d; color: #fff;
+    padding: 12px 18px; border-radius: 16px; font-size: 15px; max-width: 90%; z-index: 10; text-align: center;
+  }
+  body.busy .btn { opacity: 0.6; pointer-events: none; }
+  #sparkles { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+  #sparkles span {
+    position: absolute; bottom: -10%; font-size: 16px; opacity: 0;
+    animation: floatUp linear infinite;
+  }
+  #app { position: relative; z-index: 1; }
+  .progressbar { height: 8px; border-radius: 999px; background: rgba(139, 108, 255, 0.15); overflow: hidden; margin: -4px 0 16px; }
+  .progressbar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--pink), var(--purple)); transition: width 0.4s ease; }
+  .confetti-piece { position: fixed; top: -20px; border-radius: 2px; pointer-events: none; z-index: 20; animation: confettiFall linear forwards; }
+  .float-emoji { position: fixed; bottom: 22%; font-size: 48px; z-index: 25; pointer-events: none; animation: floatEmojiRise 1.5s ease-out forwards; }
+  .chatlog { max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  .bubblewrap { display: flex; }
+  .bubblewrap.mine { justify-content: flex-end; }
+  .bubble { background: var(--inputbg); border: 2px solid var(--inputborder); border-radius: 16px; padding: 10px 14px; max-width: 75%; font-size: 15px; word-wrap: break-word; }
+  .bubble.mine { background: linear-gradient(135deg, var(--pink), var(--purple)); color: #fff; border-color: transparent; }
+  .bubblename { font-size: 11px; font-weight: 800; color: var(--muted); margin-bottom: 2px; }
+  .reactrow { margin: -4px 0 4px; justify-content: center; }
+  .reactchip { font-size: 22px; padding: 8px 10px; }
+  .chatdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--pink); margin-left: 4px; vertical-align: middle; }
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes flipIn {
+    0% { transform: rotateY(-90deg) scale(0.95); opacity: 0; }
+    60% { transform: rotateY(8deg) scale(1.02); opacity: 1; }
+    100% { transform: rotateY(0deg) scale(1); opacity: 1; }
+  }
+  @keyframes mascotBounce {
+    0% { transform: scale(1) translateY(0); }
+    30% { transform: scale(1.3) translateY(-8px); }
+    60% { transform: scale(0.95) translateY(2px); }
+    100% { transform: scale(1) translateY(0); }
+  }
+  @keyframes turnSwap {
+    0% { opacity: 0; transform: translateX(28px); }
+    100% { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
+  @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+  @keyframes floatUp {
+    0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
+    10% { opacity: 0.7; }
+    90% { opacity: 0.5; }
+    100% { transform: translateY(-110vh) translateX(20px) rotate(180deg); opacity: 0; }
+  }
+  @keyframes confettiFall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(540deg); opacity: 0; }
+  }
+  @keyframes floatEmojiRise {
+    0% { transform: translateY(0) scale(0.6); opacity: 0; }
+    15% { opacity: 1; transform: scale(1.15); }
+    100% { transform: translateY(-160px) scale(1); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+<div id="sparkles"></div>
+<div id="app"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = "https://sislhijujxzjinasqvwl.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_pz3O9UDi6pnmT2YN2n-23A_pSG9_M4n";
+  const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const app = document.getElementById("app");
+  const CATS = ["friend", "partner", "relationship", "general"];
+  const AVATARS = ["🦄", "🐱", "🐶", "🦊", "🐼", "😎", "👑", "🔥", "🌸", "⭐", "🐲", "🦁", "🐨", "🐸", "🦋", "🍓", "🍑", "🎲", "💋", "😈"];
+  const CATLABEL = { friend: "Friend", partner: "Partner", relationship: "Relationship", general: "General" };
+  const SPICE = { friend: 1, general: 1, relationship: 3, partner: 4 };
+  const QUICK_REACTIONS = ["❤️", "😂", "😮", "😢", "🔥", "👏"];
+
+  let userId = null;
+  let game = null;
+  let players = [];
+  let channel = null;
+  let pollTimer = null;
+  let screen = "loading";
+  let pendingAction = "create";
+  let joinCode = "";
+  let busy = false;
+  let lastSnap = "";
+  let lastScreenKey = "";
+  let lastQuestionKey = "";
+  let lastScores = {};
+  let toastTimer = null;
+  let addKind = "truth";
+  let addCategory = "friend";
+  let addReturn = "home";
+  let addMode = "add";
+  let deleteCats = { friend: true, partner: true, relationship: true, general: true };
+  let deletePicks = {};
+  let ownerPass = "";
+  let draftName = "";
+  let draftPass = "";
+  let draftAvatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
+  let setupCats = { friend: true, partner: true, relationship: true, general: true };
+  let setupMode = "random";
+  let setupCount = "50";
+  let setupRounds = "20";
+  let manualPicks = {};
+  let pickerQuestions = null;
+  let pickerLoading = false;
+  let showGiveCustom = false;
+  let soundOn = load("tod_sound") !== "0";
+  let audioCtx = null;
+  let lastChoosingKey = "";
+  let lastFinishedId = "";
+  let lastChatLen = 0;
+  let lastReadChatLen = 0;
+
+  function ensureAudio() {
+    if (!soundOn) return;
+    if (!audioCtx) {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        // iOS Safari needs an actual sound (even silent) played inside the
+        // user-gesture handler to fully unlock audio for later JS-triggered sounds.
+        const buffer = audioCtx.createBuffer(1, 1, 22050);
+        const source = audioCtx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioCtx.destination);
+        source.start(0);
+      } catch (e) { audioCtx = null; }
+    }
+    if (audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
+  }
+  function tone(freq, start, dur, type, vol) {
+    if (!soundOn || !audioCtx) return;
+    try {
+      const t0 = audioCtx.currentTime + start;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type || "sine";
+      osc.frequency.setValueAtTime(freq, t0);
+      gain.gain.setValueAtTime(0, t0);
+      gain.gain.linearRampToValueAtTime(vol || 0.22, t0 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.03);
+    } catch (e) {}
+  }
+  // Sound is intentionally minimal: one soft tick when a new question appears,
+  // and one short gentle chime on a win. Nothing plays for turn-start, complete or skip.
+  function playReveal() { tone(700, 0, 0.09, "sine", 0.1); }
+  function playWin() {
+    const notes = [659, 880, 1047];
+    notes.forEach(function (f, i) { tone(f, i * 0.12, 0.16, "sine", 0.1); });
+  }
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function store(k, v) {
+    try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {}
+  }
+  function load(k) {
+    try { return localStorage.getItem(k); } catch (e) { return null; }
+  }
+  function toast(msg) {
+    let t = document.getElementById("toast");
+    if (!t) { t = document.createElement("div"); t.id = "toast"; document.body.appendChild(t); }
+    t.textContent = msg;
+    t.style.display = "block";
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.style.display = "none"; }, 3500);
+  }
+  function setBusy(b) {
+    busy = b;
+    document.body.classList.toggle("busy", b);
+  }
+  async function rpc(name, args) {
+    if (busy) return { error: { message: "Please wait a moment..." } };
+    setBusy(true);
+    try {
+      const res = await client.rpc(name, args);
+      if (res.error) return { error: { message: res.error.message || "Something went wrong" } };
+      return res;
+    } catch (e) {
+      return { error: { message: (e && e.message) || "Something went wrong" } };
+    } finally {
+      setBusy(false);
+    }
+  }
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function inviteLink(code) {
+    return location.origin + location.pathname + "?code=" + encodeURIComponent(code);
+  }
+
+  async function loadState(id) {
+    const gid = id || (game && game.id);
+    if (!gid) return false;
+    try {
+      const results = await Promise.all([
+        client.from("games").select("*").eq("id", gid).maybeSingle(),
+        client.from("players").select("*").eq("game_id", gid).order("seat")
+      ]);
+      const g = results[0];
+      const p = results[1];
+      if (g.error || p.error || !g.data) return false;
+      game = g.data;
+      players = p.data || [];
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+  async function refresh() {
+    if (!(await loadState())) return;
+    processChat();
+    const snap = JSON.stringify([game, players]);
+    if (snap !== lastSnap) {
+      lastSnap = snap;
+      if (screen === "game" || screen === "chat") render();
+    }
+  }
+  function subscribe(id) {
+    if (channel) { client.removeChannel(channel); channel = null; }
+    channel = client
+      .channel("game-" + id)
+      .on("postgres_changes", { event: "*", schema: "public", table: "games", filter: "id=eq." + id }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "players", filter: "game_id=eq." + id }, refresh)
+      .subscribe();
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(refresh, 4000);
+  }
+  async function enterGame(id) {
+    const ok = await loadState(id);
+    if (!ok) return false;
+    lastSnap = JSON.stringify([game, players]);
+    lastScores = {};
+    lastChatLen = (game.chat || []).length;
+    lastReadChatLen = lastChatLen;
+    store("tod_game_id", game.id);
+    try { history.replaceState(null, "", location.pathname + "?code=" + encodeURIComponent(game.code)); } catch (e) {}
+    screen = "game";
+    showGiveCustom = false;
+    subscribe(game.id);
+    render();
+    return true;
+  }
+
+  function header(mood, bounce) {
+    return '<div id="mascot"' + (bounce ? ' class="bounce"' : '') + '>' + (mood || "🐉") + "</div>" +
+      "<h1>💌 Truth or Dare</h1>";
+  }
+  function footer(withNew) {
+    const chatBtn = game
+      ? '<button class="linkbtn" data-action="openChat">💬 Chat' + (hasUnreadChat() ? '<span class="chatdot"></span>' : "") + "</button>"
+      : "";
+    return '<div class="footer"><button class="linkbtn" data-action="openAdd">Add questions</button>' +
+      chatBtn +
+      (withNew ? '<button class="linkbtn" data-action="newGame">New Game</button>' : "") +
+      '<button class="linkbtn" data-action="toggleSound">' + (soundOn ? "🔊 Sound on" : "🔇 Muted") + "</button></div>";
+  }
+
+  function viewHome() {
+    return header() + '<p class="sub">A private game for two</p>' +
+      '<div class="card"><button class="btn" data-action="goCreate">Create Game</button></div>' +
+      '<div class="card"><p class="label">Have a room code?</p>' +
+      '<input type="text" id="codeInput" placeholder="Enter code" autocapitalize="characters" autocomplete="off" maxlength="20">' +
+      '<div class="gap"></div><button class="btn ghost" data-action="goJoinCode">Join Game</button></div>' +
+      footer(false);
+  }
+  function viewName() {
+    const joining = pendingAction === "join";
+    let html = header() +
+      '<p class="sub">' + (joining ? "Room " + esc(joinCode) : "Create a private room") + "</p>" +
+      '<div class="card"><p class="label">What is your name?</p>' +
+      '<input type="text" id="nameInput" maxlength="20" placeholder="Your name" autocomplete="off">';
+    html += '<div class="gap"></div><p class="label">Pick your icon</p><div class="chiprow">' +
+      AVATARS.map(function (a) {
+        const on = draftAvatar === a;
+        return '<button class="chip avatarchip' + (on ? " on" : "") + '" data-action="pickAvatar" data-avatar="' + a + '">' + a + "</button>";
+      }).join("") + "</div>";
+    if (!joining) {
+      html += '<div class="gap"></div><p class="label">Owner passcode</p>' +
+        '<input type="password" id="passInput" placeholder="Owner passcode" autocomplete="off" value="' + esc(ownerPass) + '">' +
+        '<p class="hint">Only the owner has this passcode.</p>';
+    }
+    html += '<div class="gap"></div><button class="btn" data-action="submitName">' + (joining ? "Join Game" : "Next") + "</button>" +
+      '<div class="gap"></div><button class="btn ghost" data-action="back">Back</button></div>';
+    return html;
+  }
+
+  function catCount(cat, kind) {
+    if (!pickerQuestions) return 0;
+    return pickerQuestions.filter(function (q) { return q.category === cat && (!kind || q.kind === kind); }).length;
+  }
+  function selectedCatsList() {
+    return CATS.filter(function (c) { return setupCats[c]; });
+  }
+  function poolForSelectedCats() {
+    if (!pickerQuestions) return [];
+    const cats = selectedCatsList();
+    return pickerQuestions.filter(function (q) { return cats.indexOf(q.category) !== -1; });
+  }
+  function manualCount() {
+    return Object.keys(manualPicks).filter(function (k) { return manualPicks[k]; }).length;
+  }
+  function spiceLevel() {
+    const cats = selectedCatsList();
+    if (!cats.length) return 0;
+    const avg = cats.reduce(function (sum, c) { return sum + (SPICE[c] || 1); }, 0) / cats.length;
+    return Math.max(1, Math.min(5, Math.round(avg)));
+  }
+  function viewSetup() {
+    let html = header() + '<p class="sub">Choose your questions</p>';
+    html += '<div class="card"><p class="label">Playing with (optional)</p>' +
+      '<input type="text" id="friendInput" maxlength="20" placeholder="Friend\'s name, e.g. Sarah" autocomplete="off">' +
+      '<p class="hint">If you play with them again later and type the same name, we\'ll skip questions you\'ve already used together.</p></div>';
+    html += '<div class="card"><p class="label">Categories (mix any you like)</p><div class="chiprow">';
+    CATS.forEach(function (c) {
+      const on = setupCats[c];
+      html += '<button class="chip' + (on ? " on" : "") + '" data-action="toggleCat" data-cat="' + c + '">' +
+        (on ? "✓ " : "") + esc(CATLABEL[c]) + "</button>";
+    });
+    html += "</div>";
+    const level = spiceLevel();
+    if (level > 0) {
+      html += '<p class="hint">Spice level: ' + "🌶️".repeat(level) + "🤍".repeat(5 - level) + "</p>";
+    }
+    if (pickerQuestions) {
+      const n = poolForSelectedCats().length;
+      html += '<p class="hint">' + n + " question" + (n === 1 ? "" : "s") + " available in the categories you picked.</p>";
+    } else {
+      html += '<p class="hint">Loading your questions...</p>';
+    }
+    html += "</div>";
+
+    html += '<div class="card"><p class="label">How many questions?</p><div class="segrow">' +
+      '<div class="seg' + (setupMode === "random" ? " on" : "") + '" data-action="modeRandom">Pick a number</div>' +
+      '<div class="seg' + (setupMode === "manual" ? " on" : "") + '" data-action="modeManual">Choose exact ones</div></div>';
+
+    if (setupMode === "random") {
+      html += '<div class="gap"></div><input type="number" id="countInput" min="2" max="500" placeholder="e.g. 50" value="' + esc(setupCount) + '">' +
+        '<p class="hint">The pool of questions the game can draw from (a mix of Truths and Dares).</p>';
+    } else {
+      html += '<div class="gap"></div><div class="pickcount">' + manualCount() + " selected</div>";
+      if (!pickerQuestions) {
+        html += '<p class="hint center">Loading questions...</p>';
+      } else {
+        const pool = poolForSelectedCats();
+        html += '<div class="checklist">';
+        let lastCat = null;
+        pool.forEach(function (q) {
+          if (q.category !== lastCat) {
+            lastCat = q.category;
+            html += '<div class="cgroup">' + esc(CATLABEL[q.category] || q.category) + "</div>";
+          }
+          const checked = manualPicks[q.id] ? " checked" : "";
+          html += '<label class="citem"><input type="checkbox" data-action="toggleQ" data-qid="' + q.id + '"' + checked + '>' +
+            '<span><span class="ckind ' + q.kind + '">' + q.kind.toUpperCase() + "</span>" + esc(q.text) + "</span></label>";
+        });
+        if (pool.length === 0) html += '<p class="hint center">No questions in these categories yet.</p>';
+        html += "</div>";
+      }
+    }
+    html += "</div>";
+
+    html += '<div class="card"><p class="label">Rounds to play</p>' +
+      '<input type="number" id="roundsInput" min="2" max="500" placeholder="e.g. 20" value="' + esc(setupRounds) + '">' +
+      '<p class="hint">How many turns before the game ends and a winner is announced. Can be less than your pool, so questions don\'t repeat too soon.</p>' +
+      '<div class="gap"></div><button class="btn" data-action="startWithSetup">Create Game</button>' +
+      '<div class="gap"></div><button class="btn ghost" data-action="skipSetup">Use every question in these categories</button>' +
+      '<div class="gap"></div><button class="btn ghost" data-action="back">Back</button></div>';
+    return html;
+  }
+
+  function viewLobby() {
+    const link = inviteLink(game.code);
+    return header() + '<p class="sub">Your room is ready</p>' +
+      '<div class="card"><p class="label">Send this link to your friend</p>' +
+      '<input type="text" id="linkBox" readonly value="' + esc(link) + '">' +
+      '<div class="gap"></div><button class="btn" data-action="share">Share invite</button>' +
+      '<div class="gap"></div><button class="btn ghost" data-action="copy">Copy link</button>' +
+      '<p class="hint center">Or give them this room code:</p><div class="code">' + esc(game.code) + "</div></div>" +
+      '<div class="card center"><p class="waiting">Waiting for your friend<span class="dots">...</span></p></div>' +
+      footer(false);
+  }
+  function deletePoolCount() {
+    return Object.keys(deletePicks).filter(function (k) { return deletePicks[k]; }).length;
+  }
+  function poolForDeleteCats() {
+    if (!pickerQuestions) return [];
+    const cats = CATS.filter(function (c) { return deleteCats[c]; });
+    return pickerQuestions.filter(function (q) { return cats.indexOf(q.category) !== -1; });
+  }
+  function viewAdd() {
+    let html = header() + '<p class="sub">' + (addMode === "add" ? "Add your own questions" : "Delete questions") + '</p>';
+    html += '<div class="card"><div class="segrow">' +
+      '<div class="seg' + (addMode === "add" ? " on" : "") + '" data-action="addModeAdd">Add</div>' +
+      '<div class="seg' + (addMode === "delete" ? " on" : "") + '" data-action="addModeDelete">Delete</div></div></div>';
+
+    if (addMode === "add") {
+      html += '<div class="card"><p class="label">Type</p>' +
+        '<div class="row2 tight">' +
+        '<button class="btn ' + (addKind === "truth" ? "truth" : "ghost") + '" data-action="kindTruth">💗 Truth</button>' +
+        '<button class="btn ' + (addKind === "dare" ? "dare" : "ghost") + '" data-action="kindDare">🔥 Dare</button></div>' +
+        '<div class="gap"></div><p class="label">Category</p><div class="chiprow">' +
+        CATS.map(function (c) {
+          const on = addCategory === c;
+          return '<button class="chip' + (on ? " on" : "") + '" data-action="setAddCat" data-cat="' + c + '">' + (on ? "✓ " : "") + esc(CATLABEL[c]) + "</button>";
+        }).join("") +
+        '</div><div class="gap"></div><p class="label">Questions (one on each line)</p>' +
+        '<textarea id="addText" rows="8" placeholder="Paste or type your questions here, one on each line"></textarea>' +
+        '<div class="gap"></div><p class="label">Owner passcode</p>' +
+        '<input type="password" id="addPass" placeholder="Owner passcode" autocomplete="off" value="' + esc(ownerPass) + '">' +
+        '<div class="gap"></div><button class="btn" data-action="submitAdd">Add questions</button>' +
+        '<div class="gap"></div><button class="btn ghost" data-action="closeAdd">Back</button></div>';
+    } else {
+      html += '<div class="card"><p class="label">Categories</p><div class="chiprow">';
+      CATS.forEach(function (c) {
+        const on = deleteCats[c];
+        html += '<button class="chip' + (on ? " on" : "") + '" data-action="toggleDelCat" data-cat="' + c + '">' +
+          (on ? "✓ " : "") + esc(CATLABEL[c]) + "</button>";
+      });
+      html += "</div>";
+      if (!pickerQuestions) {
+        html += '<p class="hint center">Loading questions...</p>';
+      } else {
+        const pool = poolForDeleteCats();
+        html += '<div class="pickcount">' + deletePoolCount() + " selected to delete</div>" + '<div class="checklist">';
+        let lastCat = null;
+        pool.forEach(function (q) {
+          if (q.category !== lastCat) {
+            lastCat = q.category;
+            html += '<div class="cgroup">' + esc(CATLABEL[q.category] || q.category) + "</div>";
+          }
+          const checked = deletePicks[q.id] ? " checked" : "";
+          html += '<label class="citem"><input type="checkbox" data-action="toggleDel" data-qid="' + q.id + '"' + checked + '>' +
+            '<span><span class="ckind ' + q.kind + '">' + q.kind.toUpperCase() + "</span>" + esc(q.text) + "</span></label>";
+        });
+        if (pool.length === 0) html += '<p class="hint center">No questions in these categories.</p>';
+        html += "</div>";
+      }
+      html += '<div class="gap"></div><p class="label">Owner passcode</p>' +
+        '<input type="password" id="delPass" placeholder="Owner passcode" autocomplete="off" value="' + esc(ownerPass) + '">' +
+        '<p class="hint">Deleted questions are gone for good, from every game.</p>' +
+        '<div class="gap"></div><button class="btn" data-action="submitDelete">Delete selected</button>' +
+        '<div class="gap"></div><button class="btn ghost" data-action="closeAdd">Back</button></div>';
+    }
+    return html;
+  }
+  function viewError(msg) {
+    return header() + '<div class="card center"><p class="label">Could not connect</p><p class="hint">' + esc(msg || "") +
+      '</p><button class="btn" data-action="retry">Try again</button></div>';
+  }
+  function confetti(count, big) {
+    const colors = ["#ff6fa5", "#ffd166", "#8b6cff", "#5ce1e6", "#ff9f6f", "#a3ff8b"];
+    for (let i = 0; i < count; i++) {
+      const el = document.createElement("div");
+      el.className = "confetti-piece";
+      const size = big ? 8 + Math.random() * 8 : 5 + Math.random() * 5;
+      el.style.left = Math.random() * 100 + "vw";
+      el.style.width = size + "px";
+      el.style.height = size * 0.6 + "px";
+      el.style.background = colors[Math.floor(Math.random() * colors.length)];
+      el.style.animationDuration = (big ? 1.8 + Math.random() * 1.2 : 1.1 + Math.random() * 0.8) + "s";
+      el.style.animationDelay = Math.random() * (big ? 0.5 : 0.2) + "s";
+      document.body.appendChild(el);
+      setTimeout(function () { el.remove(); }, 3200);
+    }
+  }
+  function floatEmoji(emoji) {
+    const el = document.createElement("div");
+    el.className = "float-emoji";
+    el.textContent = emoji;
+    el.style.left = 30 + Math.random() * 40 + "vw";
+    document.body.appendChild(el);
+    setTimeout(function () { el.remove(); }, 1600);
+  }
+  function hasUnreadChat() {
+    return !!(game && game.chat && game.chat.length > lastReadChatLen);
+  }
+  function processChat() {
+    if (!game || !game.chat) return;
+    const chat = game.chat;
+    if (chat.length > lastChatLen) {
+      const me = players.find(function (p) { return p.user_id === userId; });
+      chat.slice(lastChatLen).forEach(function (m) {
+        if (m.type === "reaction" && (!me || m.from !== me.id)) {
+          floatEmoji(m.emoji);
+        }
+      });
+    }
+    lastChatLen = chat.length;
+  }
+  function pname(p) {
+    return (p.avatar ? p.avatar + " " : "") + esc(p.name);
+  }
+  function detectScores() {
+    const bumped = {};
+    let reaction = null;
+    players.forEach(function (p) {
+      if (p.id in lastScores && p.score !== lastScores[p.id]) {
+        bumped[p.id] = true;
+        const diff = p.score - lastScores[p.id];
+        if (diff > 0) { toast("🎉 " + p.name + " earned +" + diff + "!"); confetti(16, false); reaction = "🐉🎉"; }
+        else if (diff < 0) { toast("😬 " + p.name + " lost " + Math.abs(diff) + " for skipping"); reaction = "🐉😅"; }
+      }
+      lastScores[p.id] = p.score;
+    });
+    return { bumped: bumped, reaction: reaction };
+  }
+  function viewFinished() {
+    if (game.id !== lastFinishedId) {
+      lastFinishedId = game.id;
+      playWin();
+      confetti(60, true);
+    }
+    const sorted = players.slice().sort(function (a, b) { return b.score - a.score; });
+    const tie = sorted.length === 2 && sorted[0].score === sorted[1].score;
+    let html = header("🐉👑", true) + '<div class="card center"><div class="dragon">🐉✨</div>';
+    if (tie) {
+      html += '<p class="winnername">It\'s a dragon draw! 🤝</p><p class="hint">Both scored ' + sorted[0].score + " points.</p>";
+    } else {
+      html += '<p class="hint" style="margin-bottom:0">The winner is...</p><p class="winnername">' + esc(sorted[0].name) + " 🐉👑</p>" +
+        '<p class="hint">' + sorted[0].score + " points, well earned!</p>";
+    }
+    html += "</div>";
+    html += '<div class="scores">';
+    sorted.forEach(function (p, i) {
+      html += '<div class="score' + (i === 0 && !tie ? " winner" : "") + '"><div class="pname">' + pname(p) + "</div>" +
+        '<div class="pts">' + p.score + "</div></div>";
+    });
+    html += "</div>";
+    if (game.history && game.history.length) {
+      html += '<div class="card"><p class="label">📜 Match highlights</p><div class="checklist">';
+      game.history.forEach(function (h) {
+        html += '<div class="citem"><span><span class="ckind ' + (h.kind === "dare" ? "dare" : "truth") + '">' +
+          (h.kind === "dare" ? "DARE" : "TRUTH") + "</span>" + esc(h.player) + ": " + esc(h.text) +
+          (h.answer ? '<br><span class="hint">💬 ' + esc(h.answer) + "</span>" : "") + "</span></div>";
+      });
+      html += "</div></div>";
+    }
+    html += footer(true);
+    return html;
+  }
+  function viewGame() {
+    if (game.phase === "finished") return viewFinished();
+
+    const me = players.find(function (p) { return p.user_id === userId; });
+    const turnP = players.find(function (p) { return p.seat === game.turn_seat; });
+    const otherP = players.find(function (p) { return p.seat !== game.turn_seat; });
+    const myTurn = !!(me && turnP && me.id === turnP.id);
+    const turnName = turnP ? turnP.name : "Someone";
+    const otherName = otherP ? otherP.name : "your friend";
+    const scoreInfo = detectScores();
+    const bumped = scoreInfo.bumped;
+
+    const choosingKey = game.id + ":" + game.turn_seat + ":" + game.questions_used;
+    const newTurn = game.phase === "choosing" && choosingKey !== lastChoosingKey;
+    const qKeyNow = game.id + ":" + game.current_question_text;
+    const newQuestion = game.phase !== "choosing" && game.phase !== "awaiting_question" && qKeyNow !== lastQuestionKey;
+
+    let mood = "🐉";
+    let moodBounce = false;
+    if (scoreInfo.reaction) {
+      mood = scoreInfo.reaction;
+      moodBounce = true;
+    } else if (game.phase === "choosing") {
+      mood = myTurn ? "🐉✨" : "🐉💤";
+      moodBounce = newTurn;
+    } else if (game.phase === "awaiting_question") {
+      mood = "🐉👀";
+    } else {
+      mood = game.current_kind === "dare" ? "🐉😈" : "🐉😏";
+      moodBounce = newQuestion;
+    }
+
+    let html = header(mood, moodBounce);
+    if (game.question_limit) {
+      const doneCount = Math.min(game.questions_used, game.question_limit);
+      const pct = Math.round((doneCount / game.question_limit) * 100);
+      const left = Math.max(0, game.question_limit - game.questions_used);
+      html += '<p class="progress big">' + left + (left === 1 ? " question left" : " questions left") + "</p>";
+      html += '<div class="progressbar"><div class="progressbar-fill" style="width:' + pct + '%"></div></div>';
+      if (left === 1) {
+        html += '<p class="finalbadge">🏁 Final round — make it count!</p>';
+      }
+    }
+    if (game.streak >= 2) {
+      html += '<p class="streakbadge">🔥 ' + game.streak + ' in a row!</p>';
+    }
+    html += '<div class="scores">';
+    players.forEach(function (p) {
+      const active = turnP && p.id === turnP.id ? " active" : "";
+      const you = me && p.id === me.id ? " (you)" : "";
+      html += '<div class="score' + active + '"><div class="pname">' + pname(p) + you + "</div>" +
+        '<div class="pts' + (bumped[p.id] ? " bump" : "") + '">' + p.score + "</div></div>";
+    });
+    html += "</div>";
+
+    if (game.phase === "choosing") {
+      lastQuestionKey = "";
+      lastChoosingKey = choosingKey;
+      const swap = newTurn ? " swap" : "";
+      if (myTurn) {
+        html += '<div class="card center turncard' + swap + '"><p class="turn">Your turn! ✨</p><p class="hint">Pick one</p>' +
+          '<div class="row2"><button class="btn truth" data-action="pick" data-kind="truth">💗 TRUTH</button>' +
+          '<button class="btn dare" data-action="pick" data-kind="dare">🔥 DARE</button></div></div>';
+      } else {
+        html += '<div class="card center turncard' + swap + '"><p class="turn">' + esc(turnName) + "'s turn</p>" +
+          '<p class="waiting">Waiting for them to choose<span class="dots">...</span></p></div>';
+      }
+    } else if (game.phase === "awaiting_question") {
+      lastQuestionKey = "";
+      const kind = game.current_kind === "dare" ? "dare" : "truth";
+      const kindLabel = kind === "dare" ? "Dare" : "Truth";
+      if (myTurn) {
+        html += '<div class="card center"><p class="turn">You chose ' + (kind === "dare" ? "🔥" : "💗") + " " + kindLabel + "</p>" +
+          '<p class="waiting">Waiting for ' + esc(otherName) + " to send you one" + '<span class="dots">...</span></p></div>';
+      } else if (!showGiveCustom) {
+        html += '<div class="card center"><p class="turn">' + esc(turnName) + " chose " + (kind === "dare" ? "🔥" : "💗") + " " + kindLabel + "</p>" +
+          '<p class="hint">Give them a random one, or write your own</p>' +
+          '<button class="btn ' + kind + '" data-action="giveRandom">🎲 Random ' + kindLabel + "</button>" +
+          '<div class="gap"></div><button class="btn ghost" data-action="showGive">✏️ Write my own ' + kindLabel + '</button></div>';
+      } else {
+        html += '<div class="card"><p class="label">Write your own ' + kindLabel + ' for ' + esc(turnName) + '</p>' +
+          '<textarea id="customText" rows="3" maxlength="500" placeholder="Type your question or dare..."></textarea>' +
+          '<div class="gap"></div><button class="btn" data-action="submitGive">Send it</button>' +
+          '<div class="gap"></div><button class="btn ghost" data-action="hideGive">Back</button></div>';
+      }
+    } else {
+      const kind = game.current_kind === "dare" ? "dare" : "truth";
+      const isTruth = kind === "truth";
+      const answer = game.current_answer;
+      const pop = newQuestion ? " pop" : "";
+      if (newQuestion) playReveal();
+      lastQuestionKey = qKeyNow;
+      html += '<div class="card qcard' + pop + '"><span class="badge ' + kind + '">' + kind.toUpperCase() + "</span>" +
+        '<div class="qtext">' + esc(game.current_question_text) + "</div></div>";
+      if (isTruth && answer) {
+        html += '<div class="card answer"><p class="alabel">💬 ' + esc(turnName) + "'s answer</p>" +
+          '<div class="atext">' + esc(answer) + "</div></div>";
+      }
+      if (game.is_repeat_round) {
+        const repeatNote = myTurn
+          ? "🔁 " + esc(otherName) + " liked this and sent it back to you — no points for completing it, but skipping still costs 2."
+          : "🔁 You sent this question back — no points if " + esc(turnName) + " completes it, but skipping still costs 2.";
+        html += '<p class="hint center">' + repeatNote + '</p>';
+      }
+      const alreadySaved = game.repeat_seat === (me && me.seat) && game.repeat_kind === game.current_kind;
+      const repeatBtn = alreadySaved
+        ? '<p class="hint center">✅ Saved — they\'ll get this the moment this round ends</p>'
+        : '<button class="linkbtn" data-action="saveRepeat">🔁 Ask them this too</button>';
+      if (myTurn) {
+        if (isTruth && !answer) {
+          html += '<div class="card"><p class="label">Your answer</p>' +
+            '<textarea id="answerBox" rows="4" maxlength="500" placeholder="Type your answer here..."></textarea>' +
+            '<div class="gap"></div><button class="btn" data-action="sendAnswer">Send answer</button>' +
+            '<div class="gap"></div><button class="btn ghost" data-action="skip">Skip (-2 points)</button>' +
+            repeatBtn + '</div>';
+        } else {
+          html += '<div class="card center"><p class="waiting">' + (isTruth ? "Answer sent! Waiting for " : "Do it, then wait for ") +
+            esc(otherName) + ' to confirm<span class="dots">...</span></p>' +
+            '<button class="btn ghost" data-action="skip">Skip (-2 points)</button>' +
+            repeatBtn + '</div>';
+        }
+      } else {
+        if (isTruth && !answer) {
+          html += '<div class="card center"><p class="waiting">' + esc(turnName) +
+            ' is typing an answer<span class="dots">...</span></p></div>';
+        } else {
+          const pts = game.is_repeat_round ? 0 : (isTruth ? 5 : 6);
+          const completeLabel = game.is_repeat_round ? "Completed" : ("Completed +" + pts);
+          html += '<div class="card center"><p class="hint">' + esc(turnName) +
+            (isTruth ? " answered. Happy with it?" : " is doing this. Did they do it?") + "</p>" +
+            '<button class="btn green" data-action="complete">' + completeLabel + '</button></div>';
+        }
+      }
+    }
+    html += '<div class="chiprow center reactrow">' +
+      QUICK_REACTIONS.map(function (r) { return '<button class="chip reactchip" data-action="sendReaction" data-emoji="' + r + '">' + r + '</button>'; }).join("") +
+      "</div>";
+    html += footer(true);
+    return html;
+  }
+
+  function viewChat() {
+    lastReadChatLen = (game.chat || []).length;
+    const me = players.find(function (p) { return p.user_id === userId; });
+    const other = players.find(function (p) { return p.user_id !== userId; });
+    let html = header() + '<p class="sub">Chat with ' + esc(other ? other.name : "your friend") + "</p>";
+    html += '<div class="card"><div class="chatlog" id="chatlog">';
+    const msgs = (game.chat || []).filter(function (m) { return m.type === "text"; });
+    if (!msgs.length) {
+      html += '<p class="hint center">No messages yet — say hi! 👋</p>';
+    } else {
+      msgs.forEach(function (m) {
+        const mine = !!(me && m.from === me.id);
+        html += '<div class="bubblewrap' + (mine ? " mine" : "") + '"><div class="bubble' + (mine ? " mine" : "") + '">' +
+          (mine ? "" : '<div class="bubblename">' + esc(m.name || "") + "</div>") + esc(m.text) + "</div></div>";
+      });
+    }
+    html += "</div></div>";
+    html += '<div class="gap"></div><textarea id="chatBox" rows="2" maxlength="300" placeholder="Type a message..."></textarea>' +
+      '<div class="gap"></div><button class="btn" data-action="sendChat">Send</button>' +
+      '<div class="gap"></div><button class="btn ghost" data-action="closeChat">Back to game</button>';
+    return html;
+  }
+
+  function render() {
+    let key = screen;
+    let html = "";
+    if (screen === "loading") html = header() + '<p class="sub">Loading...</p>';
+    else if (screen === "home") html = viewHome();
+    else if (screen === "name") html = viewName();
+    else if (screen === "setup") html = viewSetup();
+    else if (screen === "add") html = viewAdd();
+    else if (screen === "error") html = viewError(window.__err);
+    else if (screen === "chat" && game) { key = "chat:" + game.id; html = viewChat(); }
+    else if (screen === "game" && game) {
+      if (game.status === "waiting") { key = "lobby:" + game.id; html = viewLobby(); }
+      else { key = "game:" + game.id + ":" + game.phase + ":" + showGiveCustom; html = viewGame(); }
+    }
+    const oldBox = document.getElementById("answerBox");
+    const draftAns = oldBox ? oldBox.value : "";
+    const oldCustom = document.getElementById("customText");
+    const draftCustom = oldCustom ? oldCustom.value : "";
+    const oldChat = document.getElementById("chatBox");
+    const draftChat = oldChat ? oldChat.value : "";
+    const oldChatFocused = oldChat && document.activeElement === oldChat;
+    const oldName = document.getElementById("nameInput");
+    const draftNameVal = oldName ? oldName.value : "";
+    const oldNameFocused = oldName && document.activeElement === oldName;
+    const oldFriend = document.getElementById("friendInput");
+    const draftFriendVal = oldFriend ? oldFriend.value : "";
+    const oldFriendFocused = oldFriend && document.activeElement === oldFriend;
+    const oldList = document.querySelector(".checklist");
+    const scrollTop = oldList ? oldList.scrollTop : 0;
+    app.className = key !== lastScreenKey ? "enter" : "";
+    lastScreenKey = key;
+    app.innerHTML = html;
+    const newBox = document.getElementById("answerBox");
+    if (newBox && draftAns) newBox.value = draftAns;
+    const newCustom = document.getElementById("customText");
+    if (newCustom && draftCustom) newCustom.value = draftCustom;
+    const newChat = document.getElementById("chatBox");
+    if (newChat && draftChat) {
+      newChat.value = draftChat;
+      if (oldChatFocused) { newChat.focus(); newChat.setSelectionRange(draftChat.length, draftChat.length); }
+    }
+    const newName = document.getElementById("nameInput");
+    if (newName && draftNameVal) {
+      newName.value = draftNameVal;
+      if (oldNameFocused) { newName.focus(); newName.setSelectionRange(draftNameVal.length, draftNameVal.length); }
+    }
+    const newFriend = document.getElementById("friendInput");
+    if (newFriend && draftFriendVal) {
+      newFriend.value = draftFriendVal;
+      if (oldFriendFocused) { newFriend.focus(); newFriend.setSelectionRange(draftFriendVal.length, draftFriendVal.length); }
+    }
+    const newList = document.querySelector(".checklist");
+    if (newList && scrollTop) newList.scrollTop = scrollTop;
+    const chatlog = document.getElementById("chatlog");
+    if (chatlog) chatlog.scrollTop = chatlog.scrollHeight;
+  }
+
+  async function loadPicker() {
+    if (pickerQuestions || pickerLoading) return;
+    pickerLoading = true;
+    const res = await client.rpc("list_questions_for_picker", { kinds: ["truth", "dare"], categories: null });
+    pickerLoading = false;
+    if (!res.error) {
+      pickerQuestions = res.data || [];
+      if (screen === "setup" || screen === "add") render();
+    }
+  }
+
+  async function applyAvatar() {
+    try {
+      const me = players.find(function (p) { return p.user_id === userId; });
+      if (me && me.avatar !== draftAvatar) {
+        await client.rpc("set_avatar", { pid: me.id, emoji: draftAvatar });
+        me.avatar = draftAvatar;
+      }
+    } catch (e) {}
+  }
+  async function submitName() {
+    const input = document.getElementById("nameInput");
+    const name = (input ? input.value : "").trim();
+    if (!name) { toast("Please type your name"); return; }
+    store("tod_name", name);
+    if (pendingAction === "join") {
+      const res = await rpc("join_game", { game_code: joinCode, player_name: name });
+      if (res.error) { toast(res.error.message); return; }
+      const ok = await enterGame(res.data);
+      if (!ok) { toast("Could not open the game. Please try again."); return; }
+      await applyAvatar();
+      render();
+      return;
+    }
+    const passInput = document.getElementById("passInput");
+    draftName = name;
+    draftPass = passInput ? passInput.value : "";
+    if (!draftPass) { toast("Please enter the owner passcode"); return; }
+    screen = "setup";
+    render();
+    loadPicker();
+  }
+
+  function toggleCat(c) { setupCats[c] = !setupCats[c]; render(); }
+  function setMode(m) { setupMode = m; render(); if (m === "manual") loadPicker(); }
+
+  function readFriendKey() {
+    const el = document.getElementById("friendInput");
+    return (el ? el.value : "").trim().toLowerCase();
+  }
+  async function createWithIds(ids, limit, friendKey) {
+    const res = await rpc("create_game", { player_name: draftName, passcode: draftPass, q_limit: limit, q_ids: ids });
+    if (res.error) { toast(res.error.message); return; }
+    ownerPass = draftPass;
+    manualPicks = {};
+    if (friendKey && ids && ids.length) {
+      try { await client.rpc("mark_used", { friend_key_in: friendKey, ids: ids }); } catch (e) {}
+    }
+    const ok = await enterGame(res.data);
+    if (!ok) { toast("Could not open the game. Please try again."); return; }
+    await applyAvatar();
+    render();
+  }
+  function readRounds(fallback) {
+    const raw = document.getElementById("roundsInput");
+    const n = raw ? parseInt(raw.value, 10) : NaN;
+    if (!n || n < 2) return fallback;
+    return n;
+  }
+  async function startWithSetup() {
+    const friendKey = readFriendKey();
+    if (setupMode === "random") {
+      const n = parseInt(document.getElementById("countInput").value, 10);
+      if (!n || n < 2) { toast("Please enter a pool size of at least 2"); return; }
+      if (!pickerQuestions) { toast("Still loading questions, try again in a second"); return; }
+      const pool = poolForSelectedCats();
+      if (pool.length < 2) { toast("Not enough questions in those categories"); return; }
+      let usable = pool;
+      if (friendKey) {
+        const usedRes = await client.rpc("get_used_ids", { friend_key_in: friendKey });
+        const usedIds = (usedRes && usedRes.data) || [];
+        if (usedIds.length) {
+          const fresh = pool.filter(function (q) { return usedIds.indexOf(q.id) === -1; });
+          if (fresh.length >= 2) usable = fresh;
+          else toast("You've already asked most of these before — some questions may repeat.");
+        }
+      }
+      const ids = shuffle(usable.map(function (q) { return q.id; })).slice(0, Math.min(n, usable.length));
+      if (n > usable.length) toast("Only " + usable.length + " fresh questions available in the pool");
+      const rounds = readRounds(ids.length);
+      await createWithIds(ids, rounds, friendKey);
+    } else {
+      const ids = Object.keys(manualPicks).filter(function (k) { return manualPicks[k]; }).map(Number);
+      if (ids.length < 2) { toast("Please tick at least 2 questions"); return; }
+      const rounds = readRounds(ids.length);
+      await createWithIds(ids, rounds, friendKey);
+    }
+  }
+  async function skipSetup() {
+    const rounds = readRounds(null);
+    const friendKey = readFriendKey();
+    if (!friendKey) {
+      await createWithIds(null, rounds, "");
+      return;
+    }
+    if (!pickerQuestions) { toast("Still loading questions, try again in a second"); return; }
+    const pool = poolForSelectedCats();
+    const usedRes = await client.rpc("get_used_ids", { friend_key_in: friendKey });
+    const usedIds = (usedRes && usedRes.data) || [];
+    let usable = pool;
+    if (usedIds.length) {
+      const fresh = pool.filter(function (q) { return usedIds.indexOf(q.id) === -1; });
+      if (fresh.length >= 2) usable = fresh;
+      else toast("You've already asked most of these before — some questions may repeat.");
+    }
+    const ids = usable.map(function (q) { return q.id; });
+    await createWithIds(ids, rounds, friendKey);
+  }
+  async function pick(kind) {
+    const res = await rpc("pick_kind", { gid: game.id, chosen_kind: kind });
+    if (res.error) toast(res.error.message);
+    showGiveCustom = false;
+    await refresh();
+    render();
+  }
+  async function giveRandom() {
+    const res = await rpc("assign_question", { gid: game.id });
+    if (res.error) toast(res.error.message);
+    showGiveCustom = false;
+    await refresh();
+    render();
+  }
+  async function submitGive() {
+    const ta = document.getElementById("customText");
+    const text = (ta ? ta.value : "").trim();
+    if (!text) { toast("Please type a question first"); return; }
+    const res = await rpc("assign_question", { gid: game.id, custom_text: text });
+    if (res.error) toast(res.error.message);
+    showGiveCustom = false;
+    await refresh();
+    render();
+  }
+  async function sendAnswer() {
+    const box = document.getElementById("answerBox");
+    const text = (box ? box.value : "").trim();
+    if (!text) { toast("Please type your answer first"); return; }
+    const res = await rpc("submit_answer", { gid: game.id, answer_text: text });
+    if (res.error) toast(res.error.message);
+    await refresh();
+    render();
+  }
+  async function complete() {
+    const turnP = players.find(function (p) { return p.seat === game.turn_seat; });
+    const entry = {
+      kind: game.current_kind === "dare" ? "dare" : "truth",
+      text: game.current_question_text,
+      answer: game.current_kind !== "dare" ? (game.current_answer || null) : null,
+      player: turnP ? turnP.name : "Someone"
+    };
+    const res = await rpc("complete_challenge", { gid: game.id });
+    if (res.error) { toast(res.error.message); return; }
+    try { await client.rpc("bump_streak", { gid: game.id }); } catch (e) {}
+    if (!game.is_repeat_round) {
+      try { await client.rpc("log_history", { gid: game.id, entry: entry }); } catch (e) {}
+    }
+    await refresh();
+    render();
+  }
+  async function skip() {
+    const res = await rpc("skip_challenge", { gid: game.id });
+    if (res.error) { toast(res.error.message); return; }
+    try { await client.rpc("reset_streak", { gid: game.id }); } catch (e) {}
+    await refresh();
+    render();
+  }
+  async function saveRepeat() {
+    const res = await rpc("save_repeat", { gid: game.id });
+    if (res.error) { toast(res.error.message); return; }
+    toast("🔁 Saved — they'll get this the moment this round ends");
+    await refresh();
+    render();
+  }
+  async function sendChat() {
+    const box = document.getElementById("chatBox");
+    const text = (box ? box.value : "").trim();
+    if (!text) return;
+    const me = players.find(function (p) { return p.user_id === userId; });
+    const entry = { type: "text", from: me ? me.id : null, name: me ? me.name : "Someone", text: text, ts: Date.now() };
+    if (box) box.value = "";
+    try { await client.rpc("send_chat", { gid: game.id, entry: entry }); } catch (e) {}
+    await refresh();
+    render();
+  }
+  async function sendReaction(emoji) {
+    const me = players.find(function (p) { return p.user_id === userId; });
+    const entry = { type: "reaction", from: me ? me.id : null, name: me ? me.name : "Someone", emoji: emoji, ts: Date.now() };
+    floatEmoji(emoji);
+    try { await client.rpc("send_chat", { gid: game.id, entry: entry }); } catch (e) {}
+    await refresh();
+    render();
+  }
+  async function newGame() {
+    if (!confirm("Start a fresh game? Scores reset and you will get a new invite link to send to your friend.")) return;
+    store("tod_game_id", null);
+    game = null;
+    players = [];
+    pendingAction = "create";
+    screen = "name";
+    render();
+  }
+  function setKind(k) { addKind = k; render(); }
+  function setAddCat(c) { addCategory = c; render(); }
+  function toggleDelCat(c) { deleteCats[c] = !deleteCats[c]; render(); }
+  async function submitDelete() {
+    const pw = document.getElementById("delPass");
+    const pass = pw ? pw.value : "";
+    const ids = Object.keys(deletePicks).filter(function (k) { return deletePicks[k]; }).map(Number);
+    if (!ids.length) { toast("Please tick at least one question to delete"); return; }
+    if (!pass) { toast("Please enter the owner passcode"); return; }
+    if (!confirm("Delete " + ids.length + " question" + (ids.length === 1 ? "" : "s") + " permanently? This can't be undone.")) return;
+    const res = await rpc("delete_questions", { passcode: pass, ids: ids });
+    if (res.error) { toast(res.error.message); return; }
+    ownerPass = pass;
+    deletePicks = {};
+    pickerQuestions = null;
+    toast("🗑 Deleted " + (res.data || 0) + " question" + (res.data === 1 ? "" : "s"));
+    await loadPicker();
+  }
+  async function submitAdd() {
+    const ta = document.getElementById("addText");
+    const pw = document.getElementById("addPass");
+    const text = ta ? ta.value : "";
+    const pass = pw ? pw.value : "";
+    const total = text.split(/\r?\n/).filter(function (l) { return l.trim() !== ""; }).length;
+    if (!total) { toast("Please type or paste at least one question"); return; }
+    if (!pass) { toast("Please enter the owner passcode"); return; }
+    const res = await rpc("add_questions", { passcode: pass, q_kind: addKind, q_text: text, q_category: addCategory });
+    if (res.error) { toast(res.error.message); return; }
+    ownerPass = pass;
+    pickerQuestions = null;
+    const added = res.data || 0;
+    const skipped = total - added;
+    toast("✅ Added " + added + " new " + addKind + " question" + (added === 1 ? "" : "s") +
+      (skipped > 0 ? " (" + skipped + " skipped: duplicates or too long)" : ""));
+    if (ta) ta.value = "";
+  }
+  async function copyText(t) {
+    try {
+      await navigator.clipboard.writeText(t);
+      toast("Link copied ✅");
+    } catch (e) {
+      const box = document.getElementById("linkBox");
+      if (box) { box.focus(); box.select(); box.setSelectionRange(0, 9999); }
+      toast("Touch and hold the link, then tap Copy");
+    }
+  }
+  async function shareInvite() {
+    const link = inviteLink(game.code);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Truth or Dare", text: "Join my private Truth or Dare game! 💌", url: link });
+        return;
+      } catch (e) {
+        if (e && e.name === "AbortError") return;
+      }
+    }
+    copyText(link);
+  }
+
+  document.addEventListener("touchend", ensureAudio, { once: false });
+  document.addEventListener("click", function (e) {
+    ensureAudio();
+    const el = e.target.closest("[data-action]");
+    if (!el) return;
+    const a = el.dataset.action;
+    if (a === "toggleSound") {
+      soundOn = !soundOn;
+      store("tod_sound", soundOn ? "1" : "0");
+      if (soundOn) { ensureAudio(); playReveal(); }
+      render();
+    }
+    else if (a === "goCreate") { pendingAction = "create"; screen = "name"; render(); }
+    else if (a === "goJoinCode") {
+      const input = document.getElementById("codeInput");
+      const v = (input ? input.value : "").trim().toUpperCase();
+      if (!v) { toast("Please enter the room code"); return; }
+      joinCode = v; pendingAction = "join"; screen = "name"; render();
+    }
+    else if (a === "back") { screen = pendingAction === "join" || screen === "name" ? "home" : "name"; render(); }
+    else if (a === "submitName") submitName();
+    else if (a === "pickAvatar") { draftAvatar = el.dataset.avatar; render(); }
+    else if (a === "toggleCat") toggleCat(el.dataset.cat);
+    else if (a === "modeRandom") setMode("random");
+    else if (a === "modeManual") setMode("manual");
+    else if (a === "startWithSetup") startWithSetup();
+    else if (a === "skipSetup") skipSetup();
+    else if (a === "pick") pick(el.dataset.kind);
+    else if (a === "giveRandom") giveRandom();
+    else if (a === "showGive") { showGiveCustom = true; render(); }
+    else if (a === "hideGive") { showGiveCustom = false; render(); }
+    else if (a === "submitGive") submitGive();
+    else if (a === "sendAnswer") sendAnswer();
+    else if (a === "complete") complete();
+    else if (a === "skip") skip();
+    else if (a === "saveRepeat") saveRepeat();
+    else if (a === "openChat") { screen = "chat"; render(); }
+    else if (a === "closeChat") { screen = "game"; render(); }
+    else if (a === "sendChat") sendChat();
+    else if (a === "sendReaction") sendReaction(el.dataset.emoji);
+    else if (a === "newGame") newGame();
+    else if (a === "openAdd") { addReturn = screen === "game" ? "game" : "home"; screen = "add"; addMode = "add"; render(); loadPicker(); }
+    else if (a === "closeAdd") { screen = addReturn; render(); }
+    else if (a === "kindTruth") setKind("truth");
+    else if (a === "kindDare") setKind("dare");
+    else if (a === "setAddCat") setAddCat(el.dataset.cat);
+    else if (a === "submitAdd") submitAdd();
+    else if (a === "addModeAdd") { addMode = "add"; render(); }
+    else if (a === "addModeDelete") { addMode = "delete"; render(); loadPicker(); }
+    else if (a === "toggleDelCat") toggleDelCat(el.dataset.cat);
+    else if (a === "submitDelete") submitDelete();
+    else if (a === "share") shareInvite();
+    else if (a === "copy") copyText(inviteLink(game.code));
+    else if (a === "retry") location.reload();
+  });
+  document.addEventListener("change", function (e) {
+    if (!e.target || !e.target.dataset) return;
+    if (e.target.dataset.action === "toggleQ") {
+      manualPicks[e.target.dataset.qid] = e.target.checked;
+      render();
+    } else if (e.target.dataset.action === "toggleDel") {
+      deletePicks[e.target.dataset.qid] = e.target.checked;
+      render();
+    }
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter") return;
+    if (e.target.id === "nameInput" || e.target.id === "passInput") submitName();
+    if (e.target.id === "codeInput") {
+      const btn = document.querySelector('[data-action="goJoinCode"]');
+      if (btn) btn.click();
+    }
+  });
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden && screen === "game") refresh();
+  });
+
+  function spawnSparkles() {
+    const layer = document.getElementById("sparkles");
+    if (!layer) return;
+    const emojis = ["✨", "💫", "⭐"];
+    const count = 14;
+    for (let i = 0; i < count; i++) {
+      const el = document.createElement("span");
+      el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      el.style.left = Math.random() * 100 + "vw";
+      el.style.fontSize = 10 + Math.random() * 14 + "px";
+      const duration = 10 + Math.random() * 14;
+      el.style.animationDuration = duration + "s";
+      el.style.animationDelay = -Math.random() * duration + "s";
+      layer.appendChild(el);
+    }
+  }
+  async function boot() {
+    spawnSparkles();
+    render();
+    try {
+      let sessionResult = await client.auth.getSession();
+      let session = sessionResult.data.session;
+      if (!session) {
+        const signIn = await client.auth.signInAnonymously();
+        if (signIn.error) throw signIn.error;
+        session = signIn.data.session;
+      }
+      userId = session.user.id;
+    } catch (e) {
+      window.__err = (e && e.message) || String(e);
+      screen = "error";
+      render();
+      return;
+    }
+
+    const code = (new URLSearchParams(location.search).get("code") || "").trim().toUpperCase();
+    if (code) {
+      let existing = null;
+      try {
+        const r = await client.from("games").select("id").eq("code", code).maybeSingle();
+        existing = r.data;
+      } catch (e) {}
+      if (existing && (await enterGame(existing.id))) return;
+      joinCode = code;
+      pendingAction = "join";
+      screen = "name";
+      render();
+      return;
+    }
+
+    const saved = load("tod_game_id");
+    if (saved) {
+      const ok = await loadState(saved);
+      if (ok && game.phase !== "finished") {
+        await enterGame(saved);
+        return;
+      }
+      store("tod_game_id", null);
+      game = null;
+      players = [];
+    }
+    screen = "home";
+    render();
+  }
+  boot();
+</script>
+</body>
+</html>
